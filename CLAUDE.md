@@ -11,7 +11,7 @@ A Slack (and web demo) agent that sends money and splits bills through PayPal. I
 - `src/paypal.js` — PayPal Orders v2 (create, check, capture) and mock mode.
 - `src/http.js`, `api/*.js`, `src/server.js` — web demo API (Vercel functions and local server share the handlers).
 - `src/slack.js`, `src/slack-text.js` — Slack adapter (Bolt, Socket Mode) and its text helpers. Not yet run against a real workspace. Setup is in the README; the app manifest is `slack-manifest.yml`.
-- `src/imessage.js` — experimental macOS iMessage adapter, unverified.
+- `src/imessage.js` — experimental macOS iMessage adapter. Observed replying and creating a PayPal sandbox order link in a real iMessage chat; a payment approved from iMessage has not completed yet.
 - `public/index.html` — the simulated group chat judges use.
 - `test/ledger.test.js` — offline tests. Run `npm test` after any change.
 
