@@ -1,5 +1,7 @@
 # Settle 💸
 
+> **Taking over this project?** Start with [`HANDOFF.md`](HANDOFF.md): current status, the open problem and the submission checklist.
+
 **Pay friends and split bills inside WhatsApp, powered by PayPal and Claude.**
 
 In India you can send money in a WhatsApp chat with UPI. Almost everywhere else you can't: you leave the chat, open a banking app, ask for details, and somebody keeps a spreadsheet of who owes what. Settle is an AI agent you message (or add to a group) that closes that gap using the PayPal accounts people already have.
