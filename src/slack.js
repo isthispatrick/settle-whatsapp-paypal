@@ -24,7 +24,7 @@ fs.mkdirSync("data", { recursive: true });
 const chats = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) : {};
 const save = () => fs.writeFileSync(STATE_FILE, JSON.stringify(chats));
 
-const app = new bolt.App({ token: process.env.SLACK_BOT_TOKEN, appToken: process.env.SLACK_APP_TOKEN, socketMode: true });
+const app = new bolt.App({ token: process.env.SLACK_BOT_TOKEN, appToken: process.env.SLACK_APP_TOKEN, socketMode: true, tokenVerificationEnabled: false }); // we verify the token ourselves below, with a readable error
 const names = new Map(); // Slack user id -> display name
 const stashedImages = new Map(); // channel -> last image posted without addressing the bot
 const queues = new Map(); // channel -> promise chain, so one channel's messages are handled in order
