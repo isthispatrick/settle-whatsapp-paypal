@@ -65,6 +65,7 @@ Settle answers every DM. In channels it only answers when mentioned (or when a m
 ## Limits and what's next
 
 - The payer approves each payment in PayPal (one tap). Vaulted PayPal payment tokens would allow "reply YES to pay" with no redirect.
+
 **iMessage (experimental, macOS):** `npm run imessage` reads new messages from the Messages app on a Mac and replies through it with the same agent. It needs Full Disk Access for Terminal and only answers messages that mention "settle". Observed working on 12 Nov 2026: an incoming iMessage got an agent reply, and `@settle send them £2` created a real PayPal sandbox order and posted its approval link in the chat. A payment approved from iMessage has not been completed yet.
 
 - The web demo keeps chat state in the browser; the Slack bot keeps it in `data/slack-state.json`. A real deployment needs a database.
