@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settle</title>
+<body style="font:18px system-ui;text-align:center;padding:70px 20px;color:#111">
+<div style="font-size:56px" id="i">✅</div>
+<h2 id="t">Approved</h2>
+<p id="p">You can go back to your chat — Settle will confirm there in a few seconds.</p>
+<script>
+if (new URLSearchParams(location.search).has("cancelled")) {
+  i.textContent = "↩️"; t.textContent = "Payment cancelled"; p.textContent = "Nothing was charged. You can go back to your chat.";
+}
+</script>

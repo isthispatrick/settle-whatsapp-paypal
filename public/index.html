@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settle — pay and split bills inside WhatsApp, powered by PayPal</title>
+<style>
+  :root { --green:#008069; --bg:#efeae2; --out:#d9fdd3; --ink:#111b21; --muted:#667781; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:#d1d7db; }
+  .wrap { max-width:1060px; margin:0 auto; display:grid; grid-template-columns:330px 1fr; gap:20px; padding:20px; min-height:100vh; }
+  aside h1 { margin:0 0 4px; font-size:28px; }
+  aside p { color:#3b4a54; margin:8px 0; }
+  aside .card { background:#fff; border-radius:12px; padding:14px 16px; margin-top:14px; }
+  aside h3 { margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .try button { display:block; width:100%; text-align:left; background:#f0f2f5; border:0; border-radius:8px; padding:8px 10px; margin:6px 0; font:inherit; cursor:pointer; }
+  .try button:hover { background:#e2e6ea; }
+  .badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:99px; background:#e7f8f3; color:var(--green); font-weight:600; }
+  .phone { background:var(--bg); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; height:calc(100vh - 40px); min-height:520px; box-shadow:0 4px 24px #0002; }
+  header { background:var(--green); color:#fff; padding:10px 16px; display:flex; align-items:center; gap:12px; }
+  header .av { width:40px; height:40px; border-radius:50%; background:#fff3; display:grid; place-items:center; font-size:20px; }
+  header b { display:block; } header small { opacity:.85; }
+  header button { margin-left:auto; background:#fff2; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; }
+  #log { flex:1; overflow-y:auto; padding:16px 5%; display:flex; flex-direction:column; gap:6px; }
+  .msg { max-width:78%; padding:6px 10px 8px; border-radius:8px; background:#fff; align-self:flex-start; white-space:pre-wrap; overflow-wrap:anywhere; box-shadow:0 1px .5px #0002; }
+  .msg.me { align-self:flex-end; background:var(--out); }
+  .msg .who { font-size:12.5px; font-weight:600; margin-bottom:2px; }
+  .msg img { display:block; max-width:240px; max-height:260px; border-radius:6px; margin-bottom:4px; }
+  .msg a { color:#027eb5; }
+  .sys { align-self:center; background:#fff9; color:var(--muted); font-size:12.5px; padding:4px 10px; border-radius:8px; }
+  .typing { color:var(--muted); font-style:italic; }
+  footer { background:#f0f2f5; padding:8px 10px; }
+  .as { display:flex; gap:6px; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px; flex-wrap:wrap; }
+  .as button { border:1px solid #cfd6da; background:#fff; border-radius:99px; padding:3px 12px; cursor:pointer; font:inherit; font-size:13px; }
+  .as button.on { background:var(--green); color:#fff; border-color:var(--green); }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row input[type=text] { flex:1; border:0; border-radius:20px; padding:10px 14px; font:inherit; outline:none; min-width:0; }
+  .row button, .row label { border:0; background:var(--green); color:#fff; width:40px; height:40px; border-radius:50%; cursor:pointer; font-size:17px; display:grid; place-items:center; flex:none; }
+  .row label { background:#fff; color:var(--muted); }
+  .row label.has { background:#ffe9a8; }
+  @media (max-width:800px) { .wrap { grid-template-columns:1fr; padding:0; gap:0; } aside { padding:16px; } .phone { border-radius:0; height:100vh; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <h1>Settle 💸</h1>
+    <span class="badge" id="mode">PayPal sandbox</span>
+    <p>An AI agent that lives in your WhatsApp chats. Tell it who to pay, or drop in a receipt, and it moves the money over <b>PayPal</b> — the UPI-in-chat experience, for everywhere else.</p>
+    <p>This page simulates a WhatsApp group so you can try the same agent without a phone. Pick who you're speaking as, and mention <b>@settle</b>.</p>
+    <div class="card try">
+      <h3>Try it</h3>
+      <button data-t="@settle my PayPal is {email}">1. Link your PayPal email</button>
+      <button data-t="@settle I paid £84 for dinner, split it between all of us">2. Add a shared expense</button>
+      <button data-t="@settle who owes what?">3. Check balances</button>
+      <button data-t="@settle settle up">4. Settle up (as someone who owes)</button>
+      <button data-t="@settle send Tom £12 for the taxi">5. Send money directly</button>
+      <p style="font-size:13px;color:#667781;margin:8px 0 0">Or attach a receipt photo 📎 and say “@settle split this, Aisha had the wine”.</p>
+    </div>
+    <div class="card" style="font-size:13.5px">
+      <h3>How it works</h3>
+      Claude understands the message or receipt and calls tools. Payments are PayPal Orders with the recipient as payee: the payer approves in PayPal, Settle captures it and confirms in the chat. Nobody can spend anyone else's money.
+    </div>
+  </aside>
+  <main class="phone">
+    <header>
+      <div class="av">🏠</div>
+      <div><b>Flat 12 🏡</b><small id="names"></small></div>
+      <button id="reset" title="Start over">Reset</button>
+    </header>
+    <div id="log"></div>
+    <footer>
+      <div class="as">Speaking as: <span id="personas"></span></div>
+      <form class="row" id="f">
+        <label id="clip" title="Attach a receipt photo">📎<input type="file" id="file" accept="image/*" hidden></label>
+        <input type="text" id="t" placeholder="Message — mention @settle to talk to the agent" autocomplete="off">
+        <button title="Send">➤</button>
+      </form>
+    </footer>
+  </main>
+</div>
+<script>
+const PEOPLE = [{ id: "shrey", name: "Shrey" }, { id: "aisha", name: "Aisha" }, { id: "tom", name: "Tom" }];
+const KEY = "settle-demo-v1";
+let S = JSON.parse(localStorage.getItem(KEY) || "null") || { state: null, log: [], me: "shrey", pending: [] };
+let image = null, busy = false;
+const $ = (id) => document.getElementById(id);
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...S, log: S.log.map((m) => ({ ...m, img: undefined })) })); } catch {} };
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const rich = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
+const COLORS = { Shrey: "#06cf9c", Aisha: "#e542a3", Tom: "#1f7aec", Settle: "#008069" };
+
+function render() {
+  $("names").textContent = PEOPLE.map((p) => p.name).join(", ") + ", Settle";
+  $("personas").innerHTML = PEOPLE.map((p) => `<button type="button" data-id="${p.id}" class="${p.id === S.me ? "on" : ""}">${p.name}</button>`).join(" ");
+  const meName = PEOPLE.find((p) => p.id === S.me).name;
+  $("log").innerHTML =
+    '<div class="sys">Settle was added to the group. Mention @settle to use it.</div>' +
+    S.log.map((m) => m.sys ? `<div class="sys">${esc(m.text)}</div>` :
+      `<div class="msg ${m.who === meName ? "me" : ""}"><div class="who" style="color:${COLORS[m.who] || "#555"}">${esc(m.who)}</div>${m.img ? `<img src="${m.img}">` : m.hadImg ? "🖼️ <i>photo</i>\n" : ""}${rich(m.text)}</div>`).join("") +
+    (busy ? '<div class="msg typing">Settle is typing…</div>' : "");
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  return j;
+}
+
+async function sendMsg(text) {
+  if (busy || (!text && !image)) return;
+  const me = PEOPLE.find((p) => p.id === S.me);
+  const img = image;
+  S.log.push({ who: me.name, text, img: img?.url, hadImg: !!img });
+  const addressed = /@settle\b|^\s*(?:(?:hey|hi|ok|yo)[\s,]+)?settle\b/i.test(text);
+  if (addressed) { image = null; $("clip").classList.remove("has"); }
+  busy = addressed; render();
+  try {
+    const out = await post("/api/chat", { state: S.state, sender: me, members: PEOPLE, text, image: addressed && img ? { data: img.data, mediaType: "image/jpeg" } : null });
+    S.state = out.state;
+    if (out.paypalMode) $("mode").textContent = "PayPal " + out.paypalMode;
+    for (const r of out.replies) S.log.push({ who: "Settle", text: r });
+    S.pending.push(...(out.newPayments || []));
+  } catch (e) {
+    S.log.push({ sys: true, text: e.message });
+  }
+  busy = false; persist(); render();
+}
+
+// Poll PayPal for payments waiting on approval.
+setInterval(async () => {
+  if (!S.pending.length || busy) return;
+  try {
+    const out = await post("/api/payment", { state: S.state, orderIds: S.pending });
+    if (busy) return; // a chat turn started meanwhile; its state wins, we retry next tick
+    S.state = out.state; S.pending = out.pending;
+    for (const m of out.messages) S.log.push({ who: "Settle", text: m });
+    if (out.messages.length) { persist(); render(); }
+  } catch {}
+}, 4000);
+
+$("f").onsubmit = (e) => { e.preventDefault(); const t = $("t").value.trim(); $("t").value = ""; sendMsg(t); };
+$("personas").onclick = (e) => { if (e.target.dataset.id) { S.me = e.target.dataset.id; persist(); render(); } };
+$("reset").onclick = () => { if (confirm("Clear this demo chat?")) { localStorage.removeItem(KEY); location.reload(); } };
+document.querySelector(".try").onclick = (e) => {
+  const t = e.target.dataset?.t; if (!t) return;
+  $("t").value = t.replace("{email}", `${S.me}@example.com`); $("t").focus();
+};
+$("file").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  const bmp = await createImageBitmap(f);
+  const k = Math.min(1, 1500 / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  image = { url, data: url.split(",")[1] };
+  $("clip").classList.add("has"); $("t").focus();
+};
+render();
+</script>
+</body>
+</html>
