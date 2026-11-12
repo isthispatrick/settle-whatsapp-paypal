@@ -103,6 +103,13 @@ async function createPayment(chat, ctx, { toRef, amountMinor, currency, note }) 
   return `Payment request ${id} created for ${fmt(amountMinor, currency)} to ${toName}; the approval link was posted to the chat.`;
 }
 
+/** Total of a member's not-yet-approved payments to another member. */
+function openAmount(chat, from, to, currency) {
+  return Object.values(chat.payments)
+    .filter((p) => p.status === "AWAITING_APPROVAL" && p.from === from && p.to === to && p.currency === currency && Date.now() - p.createdAt < PAYMENT_TTL_MS)
+    .reduce((a, p) => a + p.amount, 0);
+}
+
 const currencyField = z.enum(CURRENCIES).optional().describe(`ISO currency code. Defaults to ${DEFAULT_CURRENCY}.`);
 
 /** Tool definitions bound to one incoming message. Exported so they can be tested without the model. */
@@ -202,7 +209,13 @@ export function buildTools(chat, ctx) {
         "Create PayPal payment links for everything the sender of the current message owes on the group tab. Only settles the sender's own debts.",
       inputSchema: z.object({}),
       run: guard(async () => {
-        const mine = transfers(chat).filter((t) => t.from === ctx.sender.id);
+        const owed = transfers(chat).filter((t) => t.from === ctx.sender.id);
+        // Don't issue a second link for a debt that already has one waiting for approval.
+        const mine = owed
+          .map((t) => ({ ...t, amount: t.amount - openAmount(chat, t.from, t.to, t.currency) }))
+          .filter((t) => t.amount > 0);
+        if (owed.length && !mine.length)
+          return `${name(chat, ctx.sender.id)} already has payment links waiting for approval that cover everything owed. Approve those (they are earlier in the chat) rather than creating new ones.`;
         if (!mine.length) return `${name(chat, ctx.sender.id)} doesn't owe anything. Balances:\n${balancesText(chat)}`;
         const results = [];
         for (const t of mine) {
@@ -248,7 +261,7 @@ export async function handleMessage({ chat, sender, text, image, publicUrl }) {
   try {
     const final = await anthropic().beta.messages.toolRunner({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: 16000,
       system: SYSTEM,
       output_config: { effort: process.env.SETTLE_EFFORT || "low" },
       betas: ["server-side-fallback-2026-07-01"],
@@ -260,6 +273,7 @@ export async function handleMessage({ chat, sender, text, image, publicUrl }) {
     reply = final.stop_reason === "refusal"
       ? "Sorry, I can't help with that one."
       : final.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+    if (!reply && !ctx.outbox.length) reply = "Sorry, I couldn't finish that one. Could you say it again, a bit more simply?";
   } catch (e) {
     console.error("agent error:", e);
     reply = e instanceof Anthropic.AuthenticationError || /authentication method/.test(e.message)
@@ -279,6 +293,8 @@ export async function handleMessage({ chat, sender, text, image, publicUrl }) {
  * Poll one payment. Captures it once the payer has approved.
  * @returns {{done: boolean, message?: string}}
  */
+const checking = new Set();
+
 export async function checkPayment(chat, orderId) {
   const p = chat.payments[orderId];
   if (!p || p.status !== "AWAITING_APPROVAL") return { done: true };
@@ -287,11 +303,18 @@ export async function checkPayment(chat, orderId) {
     p.status = "EXPIRED";
     return { done: true, message: `⌛ Payment ${label} expired without approval.` };
   }
-  const status = await settleOrder(orderId);
+  if (checking.has(orderId)) return { done: false }; // a slow check is still running
+  checking.add(orderId);
+  let status, reason;
+  try {
+    ({ status, reason } = await settleOrder(orderId));
+  } finally {
+    checking.delete(orderId);
+  }
   if (status === "WAITING") return { done: false };
   if (status === "FAILED") {
     p.status = "FAILED";
-    return { done: true, message: `❌ Payment ${label} didn't go through.` };
+    return { done: true, message: `❌ Payment ${label} didn't go through${reason ? ` — ${reason}` : ""}. Nothing was recorded on the tab.` };
   }
   p.status = status;
   // Money between two members counts against the group tab.

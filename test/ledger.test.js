@@ -62,3 +62,28 @@ assert.equal(isAddressed({ isGroup: true }, "hey settle, send Tom £5"), true);
 assert.equal(isAddressed({ isGroup: true }, "unsettled weather"), false);
 assert.equal(isAddressed({ isGroup: false }, "hi"), true);
 console.log("all tests passed");
+
+// Regression: review findings.
+{
+  const { chatApi, paymentApi } = await import("../src/http.js");
+  const bad = await chatApi({ sender: { id: "__proto__", name: "Mallory" }, text: "hello" }, "http://x");
+  assert.equal(bad.status, 400);
+  const polluted = await chatApi({ state: JSON.parse('{"members":{"__proto__":{"name":"M"},"ok":{"name":"Ok"}}}'), sender: { id: "ok", name: "Ok" }, text: "hello" }, "http://x");
+  assert.equal(polluted.status, 200);
+  assert.equal({}.name, undefined);
+  assert.deepEqual(Object.keys(polluted.json.state.members), ["ok"]);
+
+  // A second "settle up" before approving must not create a second link.
+  const b = as("t");
+  assert.match(await b.tools.settle_up({}), /£13.00 to Shrey/);
+  const again = as("t");
+  assert.match(await again.tools.settle_up({}), /already has payment links/);
+  assert.equal(again.ctx.newPayments.length, 0);
+
+  // Mock approval passed from the browser completes the payment on any instance.
+  const [id] = b.ctx.newPayments;
+  const out = await paymentApi({ state: JSON.parse(JSON.stringify(chat)), orderIds: [id], approvedMock: [id] });
+  assert.equal(out.json.pending.length, 0);
+  assert.match(out.json.messages[0], /✅/);
+}
+console.log("review regressions passed");

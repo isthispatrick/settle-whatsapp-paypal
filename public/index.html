@@ -133,7 +133,7 @@ async function sendMsg(text) {
 setInterval(async () => {
   if (!S.pending.length || busy) return;
   try {
-    const out = await post("/api/payment", { state: S.state, orderIds: S.pending });
+    const out = await post("/api/payment", { state: S.state, orderIds: S.pending, approvedMock: JSON.parse(localStorage.getItem("settle-mock-approved") || "[]") });
     if (busy) return; // a chat turn started meanwhile; its state wins, we retry next tick
     S.state = out.state; S.pending = out.pending;
     for (const m of out.messages) S.log.push({ who: "Settle", text: m });

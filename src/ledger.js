@@ -7,7 +7,7 @@ export const toMinor = (n) => Math.round(Number(n) * 100);
 export const fmt = (minor, cur) => `${SYMBOLS[cur] ?? cur + " "}${(minor / 100).toFixed(2)}`;
 
 export function newChat(id, isGroup) {
-  return { id, isGroup, members: {}, expenses: [], settlements: [], payments: {}, transcript: [], seq: 0 };
+  return { id, isGroup, members: Object.create(null), expenses: [], settlements: [], payments: {}, transcript: [], seq: 0 };
 }
 
 export function touchMember(chat, id, name) {
@@ -19,7 +19,7 @@ export function touchMember(chat, id, name) {
 /** Resolve a free-text reference ("tom", "Tom B") to a member id. Throws on unknown/ambiguous. */
 export function resolveMember(chat, ref) {
   const q = String(ref).trim().replace(/^@/, "").toLowerCase();
-  if (chat.members[ref]) return ref;
+  if (Object.hasOwn(chat.members, ref)) return ref;
   const all = Object.entries(chat.members);
   for (const test of [(n) => n === q, (n) => n.startsWith(q), (n) => n.includes(q)]) {
     const hits = all.filter(([, m]) => test(m.name.toLowerCase()));

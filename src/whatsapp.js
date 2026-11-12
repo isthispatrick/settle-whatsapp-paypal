@@ -74,7 +74,10 @@ async function onMessage(m) {
 
   // On a dedicated bot number every incoming DM is for the bot. On a personal number
   // (the default) it only reacts when addressed, so private chats are left alone.
-  const addressed = (DEDICATED && !isGroup && !m.key.fromMe) || isAddressed({ isGroup: true }, readable, mentioned);
+  // The owner's own messages in private chats need an explicit "@settle" ("Settle down mate" is not for the bot).
+  const addressed = m.key.fromMe && !isGroup
+    ? mentioned || /@settle\b/i.test(readable)
+    : (DEDICATED && !isGroup) || isAddressed({ isGroup: true }, readable, mentioned);
 
   let image = null;
   if (hasImage && (addressed || chats[jid])) {
