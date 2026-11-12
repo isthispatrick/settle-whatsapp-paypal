@@ -40,7 +40,7 @@ Settle: ✅ Shrey → Tom £28.00 paid via PayPal. Aisha owes Tom £28.00
 
 - **PayPal Orders v2.** Every payment is a PayPal order whose `payee` is the recipient's PayPal email. The payer taps the approval link, approves in PayPal, and Settle captures the order and confirms in the chat. Money goes from payer to recipient; Settle never holds funds.
 - **Claude (`claude-opus-5-5`) with tool use and vision.** Claude reads each message (and receipt photo) and decides which tool to call: send money, link a PayPal email, add or remove an expense, show balances, settle up. The model only chooses the action. All arithmetic, balance tracking and payment rules are deterministic code working in integer pence, so a split never drifts by a penny.
-- **WhatsApp.** The bot links to a WhatsApp account as a companion device (the unofficial WhatsApp Web protocol, via Baileys), which is what makes group chats possible — the official Business API has no group support. It only responds when someone mentions `@settle`.
+- **WhatsApp.** The bot links to a WhatsApp account as a companion device (the unofficial WhatsApp Web protocol, via Baileys), which is what makes group chats possible — the official Business API has no group support. It only responds when someone mentions `@settle`. **Status: built but not working live.** On 12 Nov 2026 WhatsApp rejected the link after the QR scan on two phones; WhatsApp has recently started blocking unofficial linked-device clients (Baileys issues #2886 and #2895). The demo therefore runs on the web chat, which uses the same agent code.
 - **Web demo.** Because judges can't easily join our WhatsApp group, the same agent core also runs behind a simulated WhatsApp group page where you can switch between three people and try the whole flow.
 - **Stack.** Node.js, the Anthropic SDK tool runner, Zod, Baileys, PayPal REST APIs, deployed on Vercel.
 
@@ -56,7 +56,8 @@ Moving money from a chat message needs hard rules, so they live in code rather t
 ## Challenges we ran into
 
 - **PayPal has no API to pull money from an account on a chat command** — and it shouldn't. We designed around approval instead: one tap in PayPal per payment, which is also what makes the agent safe.
-- **Group chats.** The official WhatsApp API doesn't support groups, so the prototype uses the companion-device route.
+- **Group chats.** The official WhatsApp API doesn't support groups, so the prototype uses the companion-device route. In the final hours WhatsApp started rejecting unofficial linked devices, so we couldn't run the bot on a real number before the deadline.
+- **Autopay.** We tested saving a payer's PayPal once (Vault payment tokens) and charging it later without a redirect. In the sandbox this worked when the money went to the app's own business account, but PayPal refused it when the payee was a different person's account (`BILLING_AGREEMENT_NOT_FOUND`), so we kept one-tap approval per payment.
 - **Keeping the AI away from the maths.** Receipt splitting with tax and tip is exactly where a language model makes small errors, so the model proposes shares and the code refuses anything that doesn't sum exactly to the total.
 
 ## Accomplishments that we're proud of
@@ -72,8 +73,8 @@ Moving money from a chat message needs hard rules, so they live in code rather t
 
 ## What's next for Settle
 
-- **"Reply YES to pay."** Vaulted PayPal payment tokens would let a returning user approve in the chat with no redirect.
-- **Official WhatsApp Business Platform** for 1:1 chats, and a database in place of the prototype's local state file.
+- **"Reply YES to pay" (opt-in autopay).** Saved PayPal payment tokens work for merchant charges in our sandbox test, but not yet for paying a friend directly. Next step is PayPal's platform/marketplace setup so a saved token can pay each friend, with an explicit in-chat yes and a per-payment cap.
+- **A working WhatsApp connection:** the official WhatsApp Business Platform for 1:1 chats (WhatsApp now blocks the unofficial linked-device route we used), and a database in place of the prototype's local state file.
 - Multi-currency trips, recurring splits (rent, subscriptions) and reminders.
 
 ## Built with
@@ -89,7 +90,7 @@ Moving money from a chat message needs hard rules, so they live in code rather t
 
 # Demo video script (target 2:40, hard limit 3:00)
 
-Record the WhatsApp group on a phone (screen recording) if the bot is linked; otherwise record the web demo. Keep the PayPal sandbox approval page in the shot — it proves the payment is real.
+Record the web demo: the WhatsApp bot could not be linked to a real number before the deadline, so don't show or describe a real WhatsApp chat. Keep the PayPal sandbox approval page in the shot — it proves the payment is real.
 
 | Time | On screen | Say |
 |---|---|---|

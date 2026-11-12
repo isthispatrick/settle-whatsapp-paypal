@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node test/ledger.test.js",
     "web": "node src/server.js",
-    "whatsapp": "node src/whatsapp.js"
+    "whatsapp": "node src/whatsapp.js",
+    "imessage": "node --no-warnings src/imessage.js"
   },
   "keywords": [],
   "author": "",

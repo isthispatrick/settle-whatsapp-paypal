@@ -51,7 +51,7 @@ Without PayPal credentials it runs in **mock mode** (fake payments with a local 
 
 **PayPal sandbox:** create a REST app at <https://developer.paypal.com/dashboard/applications/sandbox>, put its client ID and secret in `.env`, and use the sandbox *personal* account to approve payments and sandbox account emails as recipients.
 
-**WhatsApp:** `npm run whatsapp` links to a WhatsApp account as a companion device. Mention `@settle` (or start a message with "Settle, …") in any DM or group that account is in. Set `DEDICATED_NUMBER=1` if the number is used only for the bot so every DM is answered. This uses the unofficial WhatsApp Web protocol, which is right for a prototype (the official Business API has no group support); use a spare number.
+**WhatsApp:** `npm run whatsapp` links to a WhatsApp account as a companion device. Mention `@settle` (or start a message with "Settle, …") in any DM or group that account is in. Set `DEDICATED_NUMBER=1` if the number is used only for the bot so every DM is answered. This uses the unofficial WhatsApp Web protocol, which is right for a prototype (the official Business API has no group support); use a spare number. **Not working live yet:** on 12 Nov 2026 WhatsApp rejected the link after the QR scan (it has started blocking unofficial linked devices, see Baileys issues #2886 and #2895). The web demo runs the same agent.
 
 **Deploy the web demo:** `vercel --prod`, with the same environment variables set on the project.
 

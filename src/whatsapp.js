@@ -4,7 +4,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, Browsers } from "baileys";
+import { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, Browsers, fetchLatestWaWebVersion, fetchLatestBaileysVersion } from "baileys";
 import { handleMessage, checkPayment, isAddressed, noteMessage } from "./agent.js";
 import { newChat } from "./ledger.js";
 import { paypalMode } from "./paypal.js";
@@ -110,7 +110,11 @@ async function onMessage(m) {
 
 async function start() {
   const { state, saveCreds } = await useMultiFileAuthState("data/wa-auth");
-  sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }), browser: Browsers.macOS("Desktop"), markOnlineOnConnect: false });
+  // The WhatsApp Web version bundled with Baileys goes stale and WhatsApp then closes the socket (428)
+  // before a QR is shown, so ask for the current one first.
+  const { version } = await fetchLatestWaWebVersion().catch(() => fetchLatestBaileysVersion()).catch(() => ({}));
+  sock = makeWASocket({ auth: state, version, logger: pino({ level: process.env.WA_LOG || "silent" }), browser: Browsers.macOS("Chrome"), markOnlineOnConnect: false });
+  // Browsers.macOS("Desktop") advertises DARWIN, which WhatsApp resets with 428 before the QR (Baileys #2880).
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
     if (qr) {
