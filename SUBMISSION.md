@@ -1,5 +1,7 @@
 # Settle — Devpost submission draft
 
+> **Note, 13 Nov 2026:** this file is the text written for the hackathon deadline, when the chat side was WhatsApp. After the deadline the project moved to **Slack** (see `README.md`). Update this text before reusing it anywhere.
+
 > Draft for the PayPal AI Hackathon. Replace the two placeholders before submitting:
 > **Demo:** https://settle-nine-psi.vercel.app · **Repo:** https://github.com/isthispatrick/settle-whatsapp-paypal
 > Everything below describes what the code does today. If the PayPal flow changes during

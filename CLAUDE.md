@@ -4,13 +4,14 @@ You are picking up a hackathon project mid-flight from another person and anothe
 
 ## What this is
 
-A WhatsApp (and web demo) agent that sends money and splits bills through PayPal. Plain Node.js ESM, no build step.
+A Slack (and web demo) agent that sends money and splits bills through PayPal. It began as a WhatsApp bot; WhatsApp blocked the unofficial client, so that adapter was removed on 13 Nov 2026. Plain Node.js ESM, no build step.
 
 - `src/agent.js` — Claude tool-use agent (tools, system prompt, payment polling). Channel-agnostic.
 - `src/ledger.js` — expense ledger in integer minor units, debt simplification.
 - `src/paypal.js` — PayPal Orders v2 (create, check, capture) and mock mode.
 - `src/http.js`, `api/*.js`, `src/server.js` — web demo API (Vercel functions and local server share the handlers).
-- `src/whatsapp.js` — Baileys adapter. Never run against real WhatsApp yet.
+- `src/slack.js`, `src/slack-text.js` — Slack adapter (Bolt, Socket Mode) and its text helpers. Not yet run against a real workspace. Setup is in the README; the app manifest is `slack-manifest.yml`.
+- `src/imessage.js` — experimental macOS iMessage adapter, unverified.
 - `public/index.html` — the simulated group chat judges use.
 - `test/ledger.test.js` — offline tests. Run `npm test` after any change.
 
@@ -20,7 +21,7 @@ A WhatsApp (and web demo) agent that sends money and splits bills through PayPal
 npm install
 npm test            # must pass before committing
 npm run web         # http://localhost:3000
-npm run whatsapp    # needs a human to scan the QR in their own terminal
+npm run slack       # needs SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env
 ```
 
 ## Rules for this repo

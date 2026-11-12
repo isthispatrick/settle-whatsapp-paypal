@@ -87,3 +87,14 @@ console.log("all tests passed");
   assert.match(out.json.messages[0], /✅/);
 }
 console.log("review regressions passed");
+
+// Slack markup is flattened before the agent sees it.
+{
+  const { plainText } = await import("../src/slack-text.js");
+  const lookup = async (id) => ({ U2: "Tom" }[id] ?? id);
+  assert.equal(await plainText("<@UBOT> send <@U2> £5 &amp; thanks", lookup, "UBOT"), "@settle send @Tom £5 & thanks");
+  assert.equal(await plainText("<@UBOT> my PayPal is <mailto:tom@example.com|tom@example.com>", lookup, "UBOT"), "@settle my PayPal is tom@example.com");
+  assert.equal(await plainText("see <https://x.com/a|link> in <#C1|general>", lookup, "UBOT"), "see https://x.com/a in #general");
+  assert.equal(isAddressed({ isGroup: true }, await plainText("<@UBOT> who owes what?", lookup, "UBOT")), true);
+}
+console.log("slack text tests passed");

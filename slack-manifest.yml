@@ -1,0 +1,37 @@
+# Paste this at https://api.slack.com/apps -> Create New App -> From a manifest.
+display_information:
+  name: Settle
+  description: Send money and split bills over PayPal, right in Slack.
+  background_color: "#0b141a"
+features:
+  bot_user:
+    display_name: Settle
+    always_online: true
+  app_home:
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - users:read
+      - files:read
+      - im:history
+      - channels:history
+      - groups:history
+      - mpim:history
+      - channels:read
+      - groups:read
+      - mpim:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - message.im
+      - message.channels
+      - message.groups
+      - message.mpim
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

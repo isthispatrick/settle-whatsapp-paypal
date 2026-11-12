@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Settle — pay and split bills inside WhatsApp, powered by PayPal</title>
+<title>Settle — pay and split bills inside Slack, powered by PayPal</title>
 <style>
   :root { --green:#008069; --bg:#efeae2; --out:#d9fdd3; --ink:#111b21; --muted:#667781; }
   * { box-sizing:border-box; }
@@ -46,8 +46,8 @@
   <aside>
     <h1>Settle 💸</h1>
     <span class="badge" id="mode">PayPal sandbox</span>
-    <p>An AI agent that lives in your WhatsApp chats. Tell it who to pay, or drop in a receipt, and it moves the money over <b>PayPal</b> — the UPI-in-chat experience, for everywhere else.</p>
-    <p>This page simulates a WhatsApp group so you can try the same agent without a phone. Pick who you're speaking as, and mention <b>@settle</b>.</p>
+    <p>An AI agent that lives in your Slack channels. Tell it who to pay, or drop in a receipt, and it moves the money over <b>PayPal</b> — the UPI-in-chat experience, for everywhere else.</p>
+    <p>This page simulates a Slack channel so you can try the same agent without installing anything. Pick who you're speaking as, and mention <b>@settle</b>.</p>
     <div class="card try">
       <h3>Try it</h3>
       <button data-t="@settle my PayPal is {email}">1. Link your PayPal email</button>
@@ -65,7 +65,7 @@
   <main class="phone">
     <header>
       <div class="av">🏠</div>
-      <div><b>Flat 12 🏡</b><small id="names"></small></div>
+      <div><b># team-lunch</b><small id="names"></small></div>
       <button id="reset" title="Start over">Reset</button>
     </header>
     <div id="log"></div>
@@ -95,7 +95,7 @@ function render() {
   $("personas").innerHTML = PEOPLE.map((p) => `<button type="button" data-id="${p.id}" class="${p.id === S.me ? "on" : ""}">${p.name}</button>`).join(" ");
   const meName = PEOPLE.find((p) => p.id === S.me).name;
   $("log").innerHTML =
-    '<div class="sys">Settle was added to the group. Mention @settle to use it.</div>' +
+    '<div class="sys">Settle was added to #team-lunch. Mention @settle to use it.</div>' +
     S.log.map((m) => m.sys ? `<div class="sys">${esc(m.text)}</div>` :
       `<div class="msg ${m.who === meName ? "me" : ""}"><div class="who" style="color:${COLORS[m.who] || "#555"}">${esc(m.who)}</div>${m.img ? `<img src="${m.img}">` : m.hadImg ? "🖼️ <i>photo</i>\n" : ""}${rich(m.text)}</div>`).join("") +
     (busy ? '<div class="msg typing">Settle is typing…</div>' : "");

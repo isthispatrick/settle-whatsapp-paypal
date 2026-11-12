@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settle — money moves at the speed of chat</title>
+<meta name="description" content="Settle is an AI agent in your Slack channels. Tell it who to pay or drop in a receipt, and it moves the money over PayPal.">
+<meta property="og:title" content="Settle — money moves at the speed of chat">
+<meta property="og:description" content="Pay teammates and split bills inside Slack, powered by PayPal and Claude.">
+<style>
+  :root {
+    --bg:#07090c; --ink:#f4f7f5; --dim:#8b979f; --line:#ffffff1a;
+    --lime:#c6ff3d; --green:#25d366; --blue:#3b8bff; --pink:#ff4fa3; --card:#10151a;
+  }
+  * { box-sizing:border-box; margin:0; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg); color:var(--ink); font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
+
+  /* ambient background */
+  .aurora { position:fixed; inset:0; z-index:-2; overflow:hidden; pointer-events:none; }
+  .aurora i { position:absolute; width:60vmax; height:60vmax; border-radius:50%; filter:blur(110px); opacity:.33; animation:drift 22s ease-in-out infinite alternate; }
+  .aurora i:nth-child(1) { background:var(--green); top:-25vmax; left:-15vmax; }
+  .aurora i:nth-child(2) { background:var(--blue); top:10vmax; right:-25vmax; animation-duration:28s; animation-delay:-6s; }
+  .aurora i:nth-child(3) { background:var(--pink); bottom:-35vmax; left:20vmax; opacity:.18; animation-duration:34s; }
+  @keyframes drift { to { transform:translate(8vmax,6vmax) scale(1.2) rotate(40deg); } }
+  .grid { position:fixed; inset:0; z-index:-1; pointer-events:none; background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px); background-size:64px 64px; mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 70%); opacity:.5; }
+  #glow { position:fixed; width:520px; height:520px; border-radius:50%; background:radial-gradient(circle,#c6ff3d26,transparent 65%); transform:translate(-50%,-50%); pointer-events:none; z-index:-1; left:50%; top:30%; transition:left .25s ease-out, top .25s ease-out; }
+
+  /* nav */
+  nav { position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); background:#07090cb3; border-bottom:1px solid var(--line); }
+  nav .wrap { display:flex; align-items:center; height:64px; gap:28px; }
+  .logo { font-weight:900; font-size:22px; letter-spacing:-.03em; display:flex; align-items:center; gap:8px; }
+  .logo b { display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:var(--lime); color:#07090c; font-size:17px; transform:rotate(-8deg); }
+  nav .links { margin-left:auto; display:flex; gap:26px; color:var(--dim); font-size:15px; }
+  nav .links a:hover { color:var(--ink); }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:13px 22px; border-radius:99px; font-weight:700; background:var(--lime); color:#07090c; transition:transform .15s, box-shadow .15s; box-shadow:0 0 0 0 #c6ff3d66; }
+  .btn:hover { transform:translateY(-2px) scale(1.03); box-shadow:0 10px 40px -6px #c6ff3d88; }
+  .btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .btn.ghost:hover { box-shadow:none; border-color:#fff6; }
+  .btn.sm { padding:9px 16px; font-size:14px; }
+
+  /* hero */
+  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center; padding:70px 0 40px; min-height:min(calc(100vh - 64px),860px); }
+  .pill { display:inline-flex; gap:8px; align-items:center; border:1px solid var(--line); background:#ffffff0d; border-radius:99px; padding:6px 14px; font-size:13.5px; color:#cfd8d3; }
+  .pill i { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 0 #25d36699; animation:ping 1.6s infinite; }
+  @keyframes ping { to { box-shadow:0 0 0 12px #25d36600; } }
+  h1 { font-size:clamp(46px,7.4vw,104px); line-height:.93; letter-spacing:-.055em; font-weight:900; margin:22px 0 22px; }
+  h1 .w { display:inline-block; opacity:0; transform:translateY(60px) rotate(4deg); animation:rise .8s cubic-bezier(.2,.9,.2,1) forwards; }
+  @keyframes rise { to { opacity:1; transform:none; } }
+  .grad { background:linear-gradient(100deg,var(--lime),var(--green) 40%,var(--blue) 80%,var(--lime)); background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:rise .8s cubic-bezier(.2,.9,.2,1) forwards, sheen 5s linear infinite; }
+  @keyframes sheen { to { background-position:-220% 0; } }
+  .sub { font-size:clamp(17px,1.6vw,21px); color:#b9c4bf; max-width:540px; }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; margin-top:30px; }
+  .tiny { margin-top:18px; font-size:13.5px; color:var(--dim); }
+
+  /* phone */
+  .stage { position:relative; display:grid; place-items:center; perspective:1400px; min-height:640px; }
+  .phone { width:330px; height:640px; border-radius:46px; background:#0b1014; border:10px solid #1c2329; box-shadow:0 60px 120px -30px #000, 0 0 0 1px #ffffff14, 0 0 90px -20px #25d36655; overflow:hidden; display:flex; flex-direction:column; transform:rotateY(-14deg) rotateX(6deg); transition:transform .2s ease-out; will-change:transform; }
+  .phone header { background:#1f2c34; padding:14px 14px 10px; display:flex; gap:10px; align-items:center; font-size:14px; }
+  .phone header .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--green),var(--blue)); display:grid; place-items:center; }
+  .phone header small { display:block; color:#8696a0; font-size:11.5px; }
+  #chat { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:6px; overflow:hidden; justify-content:flex-end; background:#0b141a; }
+  .m { max-width:84%; padding:6px 9px 7px; border-radius:9px; font-size:13.2px; line-height:1.35; background:#202c33; align-self:flex-start; animation:pop .35s cubic-bezier(.2,1.4,.4,1); white-space:pre-line; }
+  .m.me { background:#005c4b; align-self:flex-end; }
+  .m.bot { background:#16242b; border:1px solid #25d36640; }
+  .m .n { font-size:11.5px; font-weight:700; display:block; margin-bottom:1px; }
+  .m .pay { display:block; margin-top:6px; background:var(--lime); color:#07090c; font-weight:800; text-align:center; border-radius:7px; padding:7px; }
+  .m.ok { background:#0d3b2a; border:1px solid var(--green); font-weight:600; }
+  @keyframes pop { from { opacity:0; transform:translateY(14px) scale(.9); } }
+  .dots span { display:inline-block; width:6px; height:6px; border-radius:50%; background:#8696a0; margin:3px 2px 0; animation:bounce 1s infinite; }
+  .dots span:nth-child(2) { animation-delay:.15s; } .dots span:nth-child(3) { animation-delay:.3s; }
+  @keyframes bounce { 50% { transform:translateY(-5px); opacity:.5; } }
+  .float { position:absolute; font-size:44px; animation:bob 5s ease-in-out infinite; filter:drop-shadow(0 12px 24px #0009); user-select:none; }
+  .float.a { top:6%; left:2%; } .float.b { top:18%; right:0; animation-delay:-1.5s; font-size:56px; } .float.c { bottom:10%; left:-2%; animation-delay:-3s; } .float.d { bottom:2%; right:6%; animation-delay:-2s; font-size:38px; }
+  @keyframes bob { 50% { transform:translateY(-22px) rotate(12deg); } }
+
+  /* marquee */
+  .marquee { border-block:1px solid var(--line); overflow:hidden; padding:18px 0; background:#ffffff05; transform:rotate(-1.2deg) scale(1.03); margin:40px 0 90px; }
+  .marquee div { display:flex; gap:44px; width:max-content; animation:slide 26s linear infinite; font-weight:900; font-size:clamp(26px,4vw,52px); letter-spacing:-.04em; text-transform:uppercase; white-space:nowrap; }
+  .marquee span:nth-child(odd) { color:transparent; -webkit-text-stroke:1.5px var(--lime); }
+  @keyframes slide { to { transform:translateX(-50%); } }
+
+  /* sections */
+  section { padding:70px 0; }
+  .eyebrow { color:var(--lime); font-weight:800; font-size:13px; letter-spacing:.16em; text-transform:uppercase; }
+  h2 { font-size:clamp(34px,5vw,68px); line-height:1; letter-spacing:-.045em; font-weight:900; margin:14px 0 18px; }
+  .lead { color:#b9c4bf; font-size:19px; max-width:640px; }
+  .reveal { opacity:0; transform:translateY(46px); transition:opacity .8s, transform .8s cubic-bezier(.2,.9,.2,1); }
+  .reveal.in { opacity:1; transform:none; }
+
+  .versus { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:40px; }
+  .vs { border:1px solid var(--line); border-radius:26px; padding:30px; background:var(--card); }
+  .vs h3 { font-size:22px; margin-bottom:14px; letter-spacing:-.02em; }
+  .vs li { list-style:none; padding:9px 0; border-top:1px dashed var(--line); color:#b9c4bf; }
+  .vs.bad li::before { content:"😩  "; } .vs.good li::before { content:"⚡  "; }
+  .vs.good { background:linear-gradient(150deg,#122414,#0e1620); border-color:#c6ff3d55; box-shadow:0 30px 80px -40px #c6ff3d66; }
+
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:44px; }
+  .card { position:relative; border:1px solid var(--line); border-radius:26px; padding:28px; background:var(--card); overflow:hidden; transition:transform .2s ease-out, border-color .2s; transform-style:preserve-3d; }
+  .card:hover { border-color:#ffffff40; }
+  .card::after { content:""; position:absolute; inset:0; background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),#c6ff3d22,transparent 60%); opacity:0; transition:opacity .25s; pointer-events:none; }
+  .card:hover::after { opacity:1; }
+  .card .ic { font-size:40px; display:inline-block; margin-bottom:16px; }
+  .card:hover .ic { animation:wiggle .6s; }
+  @keyframes wiggle { 30% { transform:rotate(-14deg) scale(1.2); } 60% { transform:rotate(10deg) scale(1.15); } }
+  .card h3 { font-size:23px; letter-spacing:-.025em; margin-bottom:8px; }
+  .card p { color:#a9b5af; font-size:15.5px; }
+  .card code { display:block; margin-top:16px; background:#0005; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font:13px ui-monospace,Menlo,monospace; color:var(--lime); }
+  .card.wide { grid-column:span 2; }
+
+  /* receipt */
+  .scan { display:grid; grid-template-columns:.8fr 1.2fr; gap:50px; align-items:center; margin-top:20px; }
+  .receipt { position:relative; background:#f6f3ea; color:#1b1b1b; font:14px/1.9 ui-monospace,Menlo,monospace; padding:26px 24px 34px; width:290px; margin:0 auto; transform:rotate(-4deg); box-shadow:0 40px 80px -30px #000; clip-path:polygon(0 0,100% 0,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0 96%); }
+  .receipt b { display:block; text-align:center; letter-spacing:.14em; }
+  .receipt p { display:flex; justify-content:space-between; }
+  .receipt hr { border:0; border-top:1px dashed #999; margin:6px 0; }
+  .receipt .beam { position:absolute; left:0; right:0; height:70px; background:linear-gradient(#c6ff3d00,#c6ff3d99); border-bottom:2px solid var(--lime); top:-70px; animation:beam 3.2s ease-in-out infinite; mix-blend-mode:multiply; }
+  @keyframes beam { 60%,100% { top:100%; } }
+  .shares { display:grid; gap:12px; margin-top:26px; }
+  .share { display:grid; grid-template-columns:90px 1fr 80px; align-items:center; gap:14px; font-weight:700; }
+  .bar { height:14px; border-radius:99px; background:#ffffff12; overflow:hidden; }
+  .bar i { display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--green),var(--lime)); transition:width 1.4s cubic-bezier(.2,.9,.2,1) .2s; }
+  .in .bar i { width:var(--w); }
+  .share span:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+
+  /* steps */
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:44px; counter-reset:s; }
+  .step { border-radius:26px; padding:30px; border:1px solid var(--line); background:linear-gradient(180deg,#141b21,#0c1014); counter-increment:s; position:relative; }
+  .step::before { content:"0" counter(s); font-weight:900; font-size:74px; letter-spacing:-.06em; line-height:1; color:transparent; -webkit-text-stroke:1.5px #ffffff40; display:block; margin-bottom:14px; }
+  .step h3 { font-size:21px; margin-bottom:6px; } .step p { color:#a9b5af; font-size:15.5px; }
+
+  .safe { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:40px; }
+  .safe div { border:1px solid var(--line); border-radius:20px; padding:22px; background:#ffffff06; font-size:15px; color:#b9c4bf; }
+  .safe strong { display:block; color:var(--ink); font-size:17px; margin:8px 0 4px; }
+
+  .final { text-align:center; padding:110px 0 120px; }
+  .final h2 { font-size:clamp(44px,8vw,120px); }
+  .final .cta { justify-content:center; }
+  footer { border-top:1px solid var(--line); padding:28px 0 40px; color:var(--dim); font-size:13.5px; }
+  footer .wrap { display:flex; gap:20px; flex-wrap:wrap; justify-content:space-between; }
+
+  canvas#fx { position:fixed; inset:0; pointer-events:none; z-index:50; }
+
+  @media (max-width:900px) {
+    .hero { grid-template-columns:1fr; padding-top:40px; text-align:center; } .sub { margin:0 auto; } .cta { justify-content:center; }
+    .stage { min-height:600px; } .phone { transform:none !important; text-align:left; width:min(330px,88vw); }
+    .cards,.steps,.versus,.scan { grid-template-columns:1fr; } .card.wide { grid-column:auto; } .safe { grid-template-columns:1fr 1fr; }
+    nav .links { display:none; } nav .btn { margin-left:auto; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation:none !important; transition:none !important; }
+    h1 .w,.reveal { opacity:1; transform:none; } .bar i { width:var(--w); }
+  }
+</style>
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div><div id="glow"></div>
+<canvas id="fx"></canvas>
+
+<nav><div class="wrap">
+  <a class="logo" href="#top"><b>S</b>Settle</a>
+  <div class="links"><a href="#why">Why</a><a href="#features">Features</a><a href="#receipt">Receipts</a><a href="#how">How it works</a><a href="#safe">Safety</a></div>
+  <a class="btn sm" href="/">Try the demo →</a>
+</div></nav>
+
+<div class="wrap" id="top">
+  <div class="hero">
+    <div>
+      <span class="pill"><i></i> Built for the PayPal AI Hackathon · sandbox prototype</span>
+      <h1><span class="w" style="animation-delay:.05s">Money</span> <span class="w" style="animation-delay:.15s">moves</span> <span class="w" style="animation-delay:.25s">at</span> <span class="w" style="animation-delay:.35s">the</span><br><span class="w grad" style="animation-delay:.5s">speed of chat.</span></h1>
+      <p class="sub">Settle is an AI agent that lives in your Slack workspace. Tell it who to pay, or drop in a receipt, and it moves the money over <b>PayPal</b>. No bank details. No spreadsheet. No leaving the chat.</p>
+      <div class="cta">
+        <a class="btn" href="/" id="go">Try the live demo <span>→</span></a>
+        <a class="btn ghost" href="https://github.com/isthispatrick/settle-whatsapp-paypal">View the code</a>
+      </div>
+      <p class="tiny">Powered by PayPal Orders API and Claude. You approve every payment in PayPal.</p>
+    </div>
+    <div class="stage" id="stage">
+      <span class="float a">💸</span><span class="float b">🧾</span><span class="float c">🍕</span><span class="float d">✅</span>
+      <div class="phone" id="phone">
+        <header><div class="av">#</div><div><b># team-lunch</b><small>Aisha, Shrey, Tom, Settle</small></div></header>
+        <div id="chat"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="marquee" aria-hidden="true"><div>
+  <span>Split it</span><span>Send it</span><span>Settle it</span><span>Snap the receipt</span><span>Split it</span><span>Send it</span><span>Settle it</span><span>Snap the receipt</span>
+  <span>Split it</span><span>Send it</span><span>Settle it</span><span>Snap the receipt</span><span>Split it</span><span>Send it</span><span>Settle it</span><span>Snap the receipt</span>
+</div></div>
+
+<section id="why"><div class="wrap">
+  <div class="reveal"><span class="eyebrow">The gap</span>
+    <h2>India pays in the chat.<br>Everyone else leaves it.</h2>
+    <p class="lead">With UPI, paying a friend is a message. Almost everywhere else it's a banking app, a sort code and a group spreadsheet nobody updates. Most people already have PayPal. Settle puts it where the conversation is.</p></div>
+  <div class="versus">
+    <div class="vs bad reveal"><h3>Without Settle</h3><ul>
+      <li>"What's your sort code again?"</li><li>Leave the chat, open the bank app, come back</li><li>One person fronts the bill and chases for weeks</li><li>A spreadsheet called "trip FINAL v3"</li></ul></div>
+    <div class="vs good reveal"><h3>With Settle</h3><ul>
+      <li>"@settle send Tom £20 for pizza"</li><li>One tap in PayPal, confirmation lands in the chat</li><li>The tab updates itself as people pay</li><li>A receipt photo becomes a fair split</li></ul></div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <div class="reveal"><span class="eyebrow">What it does</span><h2>Say it like you'd<br>say it to a friend.</h2></div>
+  <div class="cards">
+    <div class="card wide reveal"><span class="ic">💸</span><h3>Send money in plain language</h3><p>To anyone in the chat who has linked their PayPal, or to any PayPal email. Settle posts a link, you approve it in PayPal, and the chat gets the confirmation.</p><code>@settle send Tom £20 for pizza</code></div>
+    <div class="card reveal"><span class="ic">🧮</span><h3>A tab that keeps itself</h3><p>Equal or custom splits, worked out in pence so nothing drifts.</p><code>@settle I paid £84 for dinner, split it</code></div>
+    <div class="card reveal"><span class="ic">🧾</span><h3>Reads receipts</h3><p>Totals, tax, tip and line items, straight from a photo.</p><code>@settle split this, I had the wine</code></div>
+    <div class="card reveal"><span class="ic">🤝</span><h3>Settle up in one message</h3><p>The fewest payments that clear what you owe, one PayPal link each.</p><code>@settle settle up</code></div>
+    <div class="card reveal"><span class="ic">👥</span><h3>Works in channels</h3><p>Invite it to the lunch channel or the offsite channel. It only speaks when you mention it.</p><code>@settle who owes what?</code></div>
+  </div>
+</div></section>
+
+<section id="receipt"><div class="wrap">
+  <div class="scan">
+    <div class="reveal"><div class="receipt"><div class="beam"></div>
+      <b>THE CORNER BISTRO</b><hr>
+      <p><span>Margherita pizza</span><span>12.00</span></p><p><span>Pasta arrabbiata</span><span>11.00</span></p><p><span>Caesar salad</span><span>9.00</span></p><p><span>Bottle red wine</span><span>24.00</span></p><hr>
+      <p><span>Service 12.5%</span><span>7.00</span></p><p><strong>TOTAL GBP</strong><strong>63.00</strong></p></div></div>
+    <div class="reveal"><span class="eyebrow">Receipt to split</span>
+      <h2>"I only had<br>the salad."</h2>
+      <p class="lead">Claude reads the receipt and who had what. The arithmetic runs in code, so the shares always add up to the total, service charge included.</p>
+      <div class="shares">
+        <div class="share"><span>Aisha 🍷</span><div class="bar"><i style="--w:100%"></i></div><span>£30.38</span></div>
+        <div class="share"><span>Tom 🍕</span><div class="bar"><i style="--w:56%"></i></div><span>£16.87</span></div>
+        <div class="share"><span>Shrey 🍝</span><div class="bar"><i style="--w:52%"></i></div><span>£15.75</span></div>
+      </div>
+      <p class="tiny">Real output from the agent on this receipt: wine to Aisha, pizza to Tom, pasta to Shrey, salad shared.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="reveal"><span class="eyebrow">How it works</span><h2>Three moves.<br>Zero bank details.</h2></div>
+  <div class="steps">
+    <div class="step reveal"><h3>You message</h3><p>Mention @Settle in a DM or a channel. Claude works out what you mean and which action to take.</p></div>
+    <div class="step reveal"><h3>You approve in PayPal</h3><p>Settle creates a PayPal order with your friend as the recipient and posts the link. One tap to approve.</p></div>
+    <div class="step reveal"><h3>The chat confirms</h3><p>Settle captures the payment, posts the confirmation and updates everyone's balance.</p></div>
+  </div>
+</div></section>
+
+<section id="safe"><div class="wrap">
+  <div class="reveal"><span class="eyebrow">Safety by design</span><h2>An agent that can't<br>spend your money.</h2>
+    <p class="lead">The rules live in code, not in a prompt.</p></div>
+  <div class="safe">
+    <div class="reveal">🙋<strong>Only from you</strong>A payment can only be created from the person who sent the message.</div>
+    <div class="reveal">👆<strong>Only when you approve</strong>Nothing moves until you approve it in PayPal. No auto-debit.</div>
+    <div class="reveal">🧢<strong>Capped</strong>There's a limit on every single payment.</div>
+    <div class="reveal">🛡️<strong>Receipts aren't orders</strong>Text in the chat or on a receipt is treated as information, never as an instruction to pay.</div>
+  </div>
+</div></section>
+
+<section class="final"><div class="wrap reveal">
+  <h2>Stop chasing.<br><span class="grad" style="animation:sheen 5s linear infinite">Start settling.</span></h2>
+  <div class="cta"><a class="btn" href="/" id="go2">Try the live demo →</a><a class="btn ghost" href="https://github.com/isthispatrick/settle-whatsapp-paypal">Star it on GitHub</a></div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>Settle · a hackathon prototype running on the PayPal sandbox. Not affiliated with PayPal or Slack.</span>
+  <span>MIT licensed · built with Claude</span>
+</div></footer>
+
+<script>
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// --- looping chat in the phone
+const SCRIPT = [
+  { who: "Tom", c: "#53bdeb", t: "@settle I paid £84 for dinner, split it between all of us" },
+  { bot: 1, t: "Dinner, £84.00, split 3 ways.\nAisha owes Tom £28.00\nShrey owes Tom £28.00" },
+  { who: "Aisha", c: "#ff7eb6", t: "🧾 @settle split this, I had the wine" },
+  { bot: 1, t: "The Corner Bistro, £63.00\nAisha £30.38 · Tom £16.87 · Shrey £15.75" },
+  { me: 1, t: "@settle settle up" },
+  { bot: 1, t: "💸 Shrey → Tom: £39.13", pay: "Approve with PayPal" },
+  { ok: 1, t: "✅ Shrey → Tom £39.13 paid via PayPal" },
+];
+const chat = document.getElementById("chat");
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function bubble(s) {
+  const d = document.createElement("div");
+  d.className = "m" + (s.me ? " me" : "") + (s.bot ? " bot" : "") + (s.ok ? " ok" : "");
+  if (s.who) { const n = document.createElement("span"); n.className = "n"; n.style.color = s.c; n.textContent = s.who; d.append(n); }
+  if (s.bot) { const n = document.createElement("span"); n.className = "n"; n.style.color = "#25d366"; n.textContent = "Settle"; d.append(n); }
+  d.append(document.createTextNode(s.t));
+  if (s.pay) { const p = document.createElement("span"); p.className = "pay"; p.textContent = s.pay; d.append(p); }
+  return d;
+}
+async function play() {
+  if (calm) { SCRIPT.forEach((s) => chat.append(bubble(s))); return; }
+  for (;;) {
+    chat.innerHTML = "";
+    for (const s of SCRIPT) {
+      if (s.bot || s.ok) {
+        const d = document.createElement("div"); d.className = "m bot dots"; d.innerHTML = "<span></span><span></span><span></span>";
+        chat.append(d); await wait(900); d.remove();
+      } else await wait(700);
+      chat.append(bubble(s));
+      if (s.ok) burst(innerWidth * 0.72, innerHeight * 0.55);
+      await wait(1300);
+    }
+    await wait(3800);
+  }
+}
+play();
+
+// --- cursor glow, phone tilt, card spotlight
+const glow = document.getElementById("glow"), phone = document.getElementById("phone"), stage = document.getElementById("stage");
+if (!calm && matchMedia("(pointer:fine)").matches) {
+  addEventListener("pointermove", (e) => {
+    glow.style.left = e.clientX + "px"; glow.style.top = e.clientY + "px";
+    const r = stage.getBoundingClientRect();
+    const x = (e.clientX - (r.left + r.width / 2)) / innerWidth, y = (e.clientY - (r.top + r.height / 2)) / innerHeight;
+    phone.style.transform = `rotateY(${-14 + x * 26}deg) rotateX(${6 - y * 20}deg)`;
+  });
+  document.querySelectorAll(".card").forEach((c) => {
+    c.addEventListener("pointermove", (e) => {
+      const r = c.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      c.style.setProperty("--mx", px * 100 + "%"); c.style.setProperty("--my", py * 100 + "%");
+      c.style.transform = `perspective(900px) rotateY(${(px - 0.5) * 8}deg) rotateX(${(0.5 - py) * 8}deg) translateY(-4px)`;
+    });
+    c.addEventListener("pointerleave", () => (c.style.transform = ""));
+  });
+}
+
+// --- scroll reveals
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.15 });
+document.querySelectorAll(".reveal").forEach((el, i) => { el.style.transitionDelay = (i % 4) * 70 + "ms"; io.observe(el); });
+
+// --- money confetti
+const cv = document.getElementById("fx"), cx = cv.getContext("2d");
+let parts = [], raf = 0;
+const fit = () => { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); };
+fit(); addEventListener("resize", fit);
+function burst(x, y, n = 26) {
+  if (calm || document.hidden) return;
+  const glyphs = ["💸", "💷", "✨", "💚", "£"];
+  for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 13 - 4, r: Math.random() * 6.3, vr: (Math.random() - 0.5) * 0.3, s: 16 + Math.random() * 18, g: glyphs[i % glyphs.length], life: 1 });
+  if (!raf) raf = requestAnimationFrame(tick);
+}
+function tick() {
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter((p) => p.life > 0 && p.y < innerHeight + 40);
+  for (const p of parts) {
+    p.vy += 0.42; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life -= 0.011;
+    cx.save(); cx.globalAlpha = Math.max(p.life, 0); cx.translate(p.x, p.y); cx.rotate(p.r);
+    cx.font = `${p.s}px system-ui`; cx.fillStyle = "#c6ff3d"; cx.fillText(p.g, -p.s / 2, p.s / 2); cx.restore();
+  }
+  raf = parts.length ? requestAnimationFrame(tick) : 0;
+}
+document.querySelectorAll(".btn:not(.ghost)").forEach((b) => b.addEventListener("pointerenter", (e) => burst(e.clientX, e.clientY, 12)));
+</script>
+</body>
+</html>

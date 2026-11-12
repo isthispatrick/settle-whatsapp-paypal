@@ -11,7 +11,7 @@ const BASE = LIVE ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.c
 export const MOCK = !process.env.PAYPAL_CLIENT_ID;
 export const paypalMode = MOCK ? "mock" : LIVE ? "live" : "sandbox";
 
-// Mock approvals are marker files so the web server and the WhatsApp process agree on them.
+// Mock approvals are marker files so the web server and the chat-adapter process agree on them.
 const mockFile = (id) => path.join(os.tmpdir(), `settle-mock-${id.replace(/[^\w-]/g, "")}`);
 let token = null;
 

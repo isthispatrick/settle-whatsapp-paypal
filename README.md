@@ -2,9 +2,9 @@
 
 > **Taking over this project?** Start with [`HANDOFF.md`](HANDOFF.md): current status, the open problem and the submission checklist.
 
-**Pay friends and split bills inside WhatsApp, powered by PayPal and Claude.**
+**Pay teammates and split bills inside Slack, powered by PayPal and Claude.**
 
-In India you can send money in a WhatsApp chat with UPI. Almost everywhere else you can't: you leave the chat, open a banking app, ask for details, and somebody keeps a spreadsheet of who owes what. Settle is an AI agent you message (or add to a group) that closes that gap using the PayPal accounts people already have.
+In India you can send money inside a chat with UPI. Almost everywhere else you can't: you leave the chat, open a banking app, ask for details, and somebody keeps a spreadsheet of who owes what for the team lunch. Settle is an AI agent you DM (or invite to a channel) in Slack that closes that gap using the PayPal accounts people already have.
 
 ```
 Tom:    @settle I paid £84 for dinner, split it between all of us
@@ -26,7 +26,7 @@ Settle: ✅ Shrey → Tom £13.80 paid via PayPal. All settled up.
 ## How it works
 
 ```
-WhatsApp (Baileys)  ─┐
+Slack (Socket Mode) ─┐
                      ├─►  agent core (src/agent.js)  ─►  Claude (tool use + vision)
 Web demo (public/)  ─┘         │
                                ├─►  ledger (src/ledger.js)  integer-pence maths, debt simplification
@@ -44,21 +44,29 @@ npm install
 cp .env.example .env      # add ANTHROPIC_API_KEY and PayPal sandbox credentials
 npm test                  # ledger + payment flow, offline
 npm run web               # web demo at http://localhost:3000
-npm run whatsapp          # scan the QR with WhatsApp → Linked devices
+npm run slack             # Slack bot (needs SLACK_BOT_TOKEN and SLACK_APP_TOKEN)
 ```
 
 Without PayPal credentials it runs in **mock mode** (fake payments with a local approve link).
 
 **PayPal sandbox:** create a REST app at <https://developer.paypal.com/dashboard/applications/sandbox>, put its client ID and secret in `.env`, and use the sandbox *personal* account to approve payments and sandbox account emails as recipients.
 
-**WhatsApp:** `npm run whatsapp` links to a WhatsApp account as a companion device. Mention `@settle` (or start a message with "Settle, …") in any DM or group that account is in. Set `DEDICATED_NUMBER=1` if the number is used only for the bot so every DM is answered. This uses the unofficial WhatsApp Web protocol, which is right for a prototype (the official Business API has no group support); use a spare number. **Not working live yet:** on 12 Nov 2026 WhatsApp rejected the link after the QR scan (it has started blocking unofficial linked devices, see Baileys issues #2886 and #2895). The web demo runs the same agent.
+**Slack** (about two minutes):
+
+1. Go to <https://api.slack.com/apps> → **Create New App** → **From a manifest**, pick your workspace and paste [`slack-manifest.yml`](slack-manifest.yml).
+2. **Install to Workspace**, then copy the **Bot User OAuth Token** (`xoxb-…`) from *OAuth & Permissions* into `.env` as `SLACK_BOT_TOKEN`.
+3. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write` scope and put it in `.env` as `SLACK_APP_TOKEN` (`xapp-…`).
+4. `npm run slack`, then DM **Settle**, or `/invite @Settle` to a channel and mention it: `@Settle I paid £84 for lunch, split it between all of us`.
+
+Settle answers every DM. In channels it only answers when mentioned (or when a message starts with "Settle, …"); it keeps the last few channel messages as context, and a receipt image posted just before "@Settle split this" is picked up. It uses Socket Mode, so no public URL is needed. **Not yet run against a real workspace:** the adapter is written and its text handling is unit-tested, but nobody has connected it with real tokens yet.
 
 **Deploy the web demo:** `vercel --prod`, with the same environment variables set on the project.
 
 ## Limits and what's next
 
 - The payer approves each payment in PayPal (one tap). Vaulted PayPal payment tokens would allow "reply YES to pay" with no redirect.
-- The web demo keeps chat state in the browser; the WhatsApp bot keeps it in `data/state.json`. A real deployment needs a database.
-- Production WhatsApp would use the official Business Platform for 1:1 chats.
+- The web demo keeps chat state in the browser; the Slack bot keeps it in `data/slack-state.json`. A real deployment needs a database.
+- The Slack bot runs in Socket Mode as one long-lived process for one workspace. A hosted, multi-workspace version would use the Events API with OAuth install and a database.
+- Settle started as a WhatsApp bot; WhatsApp began blocking unofficial linked devices on 12 Nov 2026, so the chat side moved to Slack's official API.
 
 MIT licensed.

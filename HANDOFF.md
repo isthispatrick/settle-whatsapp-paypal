@@ -1,5 +1,7 @@
 # Handoff — read this first
 
+> **Update, 13 Nov 2026:** the chat side moved from WhatsApp to **Slack**. WhatsApp blocked the unofficial linked-device client, so `src/whatsapp.js` was removed and `src/slack.js` added (`npm run slack`, setup in the README). The Slack adapter has **not** been run against a real workspace yet. Everything below about WhatsApp is history; the PayPal notes still apply.
+
 Written 12 Nov 2026, 09:15 PST (22:45 IST), for whoever takes over from Shreyansh.
 
 **Deadline:** Devpost lists **12 Nov 2026, 12:00pm PST** (13 Nov, 01:30 IST). Some third-party sites list later times; trust the Devpost page and re-read it yourself: <https://paypalaihackathon.devpost.com/rules>.
