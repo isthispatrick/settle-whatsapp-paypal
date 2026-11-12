@@ -1,7 +1,7 @@
 # Settle — Devpost submission draft
 
 > Draft for the PayPal AI Hackathon. Replace the two placeholders before submitting:
-> **Demo:** https://settle-nine-psi.vercel.app · **Repo:** `<REPO_URL>`
+> **Demo:** https://settle-nine-psi.vercel.app · **Repo:** https://github.com/isthispatrick/settle-whatsapp-paypal
 > Everything below describes what the code does today. If the PayPal flow changes during
 > sandbox testing (see "Check before submitting" at the bottom), update the matching lines.
 
@@ -83,7 +83,7 @@ Moving money from a chat message needs hard rules, so they live in code rather t
 ## Try it out
 
 - Demo: https://settle-nine-psi.vercel.app
-- Code: `<REPO_URL>`
+- Code: https://github.com/isthispatrick/settle-whatsapp-paypal
 
 ---
 
@@ -106,7 +106,7 @@ Record the WhatsApp group on a phone (screen recording) if the bot is linked; ot
 
 # Check before submitting
 
-- [ ] `<REPO_URL>` filled in (two places in this file; intended repo: isthispatrick/settle-whatsapp-paypal). The demo URL is already in.
+- [ ] https://github.com/isthispatrick/settle-whatsapp-paypal filled in (two places in this file; intended repo: isthispatrick/settle-whatsapp-paypal). The demo URL is already in.
 - [ ] One real sandbox payment has completed end to end with the recipient as the order payee. If the flow had to change (for example, money routed through Settle's own account), rewrite the "Money goes from payer to recipient; Settle never holds funds" lines above and in the video script.
 - [ ] Devpost's own rules page read for required fields, video length and deadline — the requirements here came from search results, not the rules page itself.
 - [ ] Video is public (YouTube/Vimeo) and under the limit.
